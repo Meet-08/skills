@@ -1,0 +1,258 @@
+openapi: 3.1.0
+info:
+  title: Example API            # replace
+  version: 1.0.0
+  description: |
+    Replace with a short description of the API and its consumers.
+    Clients MUST ignore unknown response fields; enum values may be added over time.
+servers:
+  - url: https://api.example.com/v1
+    description: Production
+  - url: http://localhost:8080/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Widgets               # replace with your resources
+    description: Example resource — delete or rename
+
+paths:
+  # ---- Example resource: copy this pattern for each resource, then delete ----
+  /widgets:
+    get:
+      operationId: listWidgets
+      summary: List widgets
+      tags: [Widgets]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: A page of widgets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, page]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Widget' }
+                  page: { $ref: '#/components/schemas/CursorPage' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        default: { $ref: '#/components/responses/InternalError' }
+    post:
+      operationId: createWidget
+      summary: Create a widget
+      tags: [Widgets]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WidgetCreate' }
+            example: { name: Sprocket, color: RED }
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Widget' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        default: { $ref: '#/components/responses/InternalError' }
+
+  /widgets/{widgetId}:
+    parameters:
+      - name: widgetId
+        in: path
+        required: true
+        schema: { type: string, maxLength: 64 }
+    get:
+      operationId: getWidget
+      summary: Get a widget
+      tags: [Widgets]
+      responses:
+        '200':
+          description: The widget
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Widget' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        default: { $ref: '#/components/responses/InternalError' }
+    patch:
+      operationId: updateWidget
+      summary: Partially update a widget (JSON Merge Patch)
+      tags: [Widgets]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/merge-patch+json:
+            schema: { $ref: '#/components/schemas/WidgetUpdate' }
+          application/json:
+            schema: { $ref: '#/components/schemas/WidgetUpdate' }
+      responses:
+        '200':
+          description: Updated widget
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Widget' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '412': { $ref: '#/components/responses/PreconditionFailed' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        default: { $ref: '#/components/responses/InternalError' }
+    delete:
+      operationId: deleteWidget
+      summary: Delete a widget
+      tags: [Widgets]
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        default: { $ref: '#/components/responses/InternalError' }
+  # ---- end example ----
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: Max items to return.
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque cursor from a previous response's `page.nextCursor`.
+      schema: { type: string, maxLength: 512 }
+    Sort:
+      name: sort
+      in: query
+      description: Comma-separated fields; prefix with `-` for descending, e.g. `-createdAt,name`.
+      schema: { type: string, maxLength: 200 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Unique key so retries don't create duplicates. Stored for 24h.
+      schema: { type: string, maxLength: 255 }
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: ETag from a previous GET, for optimistic concurrency.
+      schema: { type: string }
+
+  schemas:
+    # ---- Example resource schemas (replace) ----
+    Widget:
+      type: object
+      required: [id, name, color, createdAt, updatedAt]
+      properties:
+        id: { type: string, readOnly: true, example: wid_01J8Z3K8Q2 }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        color: { type: string, enum: [RED, GREEN, BLUE] }
+        createdAt: { type: string, format: date-time, readOnly: true }
+        updatedAt: { type: string, format: date-time, readOnly: true }
+    WidgetCreate:
+      type: object
+      additionalProperties: false
+      required: [name, color]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        color: { type: string, enum: [RED, GREEN, BLUE] }
+    WidgetUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        color: { type: string, enum: [RED, GREEN, BLUE] }
+    # ---- Shared schemas (keep) ----
+    CursorPage:
+      type: object
+      required: [hasMore]
+      properties:
+        nextCursor: { type: [string, 'null'] }
+        hasMore: { type: boolean }
+    Problem:
+      type: object
+      description: RFC 9457 Problem Details
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri, example: 'https://api.example.com/problems/not-found' }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        traceId: { type: string }
+        errors:
+          type: array
+          items: { $ref: '#/components/schemas/FieldError' }
+    FieldError:
+      type: object
+      required: [field, code, message]
+      properties:
+        field: { type: string, example: 'items[0].quantity' }
+        code: { type: string, example: min }
+        message: { type: string }
+
+  responses:
+    BadRequest:
+      description: Malformed request
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Unauthorized:
+      description: Missing or invalid credentials
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Forbidden:
+      description: Authenticated but not permitted
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    NotFound:
+      description: Resource not found
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    Conflict:
+      description: Conflicts with current state
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    PreconditionFailed:
+      description: ETag mismatch
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    ValidationError:
+      description: Semantically invalid input
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        Retry-After: { schema: { type: integer } }
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
+    InternalError:
+      description: Unexpected error
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } }
